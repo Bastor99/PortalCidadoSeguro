@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Painel Administrativo</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body class="admin-page">
+
+<div class="container">
+
+<h2>Painel Administrativo</h2>
+
+<p>Área restrita para servidores públicos.</p>
+
+<h3>Solicitações recentes</h3>
+
+<table>
+
+<tr>
+<th>ID</th>
+<th>Cidadão</th>
+<th>Status</th>
+<th>Ação</th>
+</tr>
+
+<tr>
+<td>101</td>
+<td>João Silva</td>
+<td>Pendente</td>
+<td><button>Aprovar</button></td>
+</tr>
+
+<tr>
+<td>102</td>
+<td>Maria Souza</td>
+<td>Em análise</td>
+<td><button>Visualizar</button></td>
+</tr>
+
+</table>
+
+<h3>Logs de Auditoria</h3>
+
+<table id="logTable">
+
+<tr>
+<th>Data</th>
+<th>Evento</th>
+</tr>
+
+</table>
+
+<button onclick="carregarLogs()">Atualizar Logs</button>
+
+<script>
+if(localStorage.getItem("role") !== "admin"){
+  alert("Acesso negado");
+  window.location = "index.html";
+}
+
+async function carregarLogs(){
+
+  const response = await fetch("/logs");
+  const logs = await response.json();
+
+  const table = document.getElementById("logTable");
+
+  table.innerHTML = `
+  <tr>
+  <th>Data</th>
+  <th>Evento</th>
+  </tr>
+  `;
+
+  logs.reverse().forEach(log => {
+
+    const row = document.createElement("tr");
+
+    row.innerHTML = `<td>${log.date}</td><td>${log.message}</td>`;
+
+    table.appendChild(row);
+
+  });
+
+}
+
+carregarLogs();
+</script>
+
+</body>
+</html>

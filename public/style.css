@@ -1,0 +1,173 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: #f4f6f9;
+    color: #333;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    background: white;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    width: 400px;
+    max-width: 90%;
+}
+
+h1, h2{
+    text-align: center;
+    margin-bottom: 20px;
+    color: #004c97;
+}
+
+p {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+ul {
+    list-style: none;
+    margin-bottom: 20px;
+}
+
+ul li {
+    background: #f1f3f6;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+}
+
+input{
+    width: 100%;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    margin-bottom: 12px;
+    font-size: 14px;
+    transition: 0.2s;
+}
+
+input:focus {
+    border-color: #004c97;
+    outline: none;
+    box-shadow: 0 0 5px rgba(0, 76, 151, 0.2);
+}
+
+button {
+    width: 100%;
+    padding: 12px;
+    background: #004c97;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+button:hover {
+    background: #0066cc;
+}
+
+a{
+    display: block;
+    text-align: center;
+    margin-top: 15px;
+    color: white;
+    background: #004c97;
+    padding: 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 14px;
+    transition: 0.2s;
+}
+
+a:hover {
+    background: #0066cc;
+}
+
+/* ---------- páginas de usuário ---------- */
+
+.user-page{
+    background:#eef5ff;
+}
+
+.cards{
+    display:flex;
+    flex-direction:column;
+    gap:15px;
+}
+
+.card{
+    background:white;
+    padding:20px;
+    border-radius:8px;
+    box-shadow:0 5px 15px rgba(0,0,0,0.08);
+}
+
+.card h3{
+    margin-bottom:8px;
+}
+
+/* ---------- páginas admin ---------- */
+
+.admin-page{
+    background:#fff4f4;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin:15px 0;
+}
+
+table th{
+    background:#8b0000;
+    color:white;
+    padding:10px;
+}
+
+table td{
+    border:1px solid #ddd;
+    padding:10px;
+}
+
+.admin-page button{
+    background:#8b0000;
+}
+
+.admin-page button:hover{
+    background:#b30000;
+}
+
+#logTable tr:nth-child(even){
+    background:#f6f6f6;
+}
+
+#logTable td{
+    font-size:14px;
+}
+
+.log-fail{
+    color:red;
+    font-weight:bold;
+}
+
+.log-success{
+    color:green;
+}
+
+#msg {
+    color: red;
+    font-size: 14px;
+    text-align: center;
+}
