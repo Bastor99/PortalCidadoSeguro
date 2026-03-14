@@ -58,6 +58,7 @@
 if(localStorage.getItem("role") !== "admin"){
   showToast('error', 'Acesso negado');
   setTimeout(() => { window.location = "index.html"; }, 900);
+  window.location = "index.html";
 }
 
 async function carregarLogs(){

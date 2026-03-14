@@ -38,6 +38,63 @@ function hideToast(el){
   el.classList.remove('show');
   setTimeout(() => { if(el.parentNode) el.parentNode.removeChild(el); }, 300);
 }
+// =============================
+// CONFIGURAÇÕES
+// =============================
+
+const SESSION_TIME = 3600000; // 1 hora
+
+
+// =============================
+// VALIDAÇÃO DE SENHA
+// =============================
+
+function validarSenha(password){
+  const regex = /^(?=.*[A-Z])(?=.*[0-9]).{6,}$/;
+  return regex.test(password);
+}
+
+
+// =============================
+// CONTROLE DE SESSÃO
+// =============================
+
+function verificarSessao(){
+
+  const loginTime = localStorage.getItem("loginTime");
+
+  if(!loginTime){
+    window.location.href = "login.html";
+    return;
+  }
+
+  const diff = Date.now() - loginTime;
+
+  if(diff > SESSION_TIME){
+    logout();
+  }
+
+}
+
+
+// =============================
+// LOGOUT
+// =============================
+
+function logout(){
+
+  localStorage.removeItem("role");
+  localStorage.removeItem("username");
+  localStorage.removeItem("loginTime");
+
+  window.location.href = "login.html";
+
+}
+
+
+// =============================
+// LOGIN
+// =============================
 
 async function login() {
 
@@ -47,7 +104,10 @@ async function login() {
 
   msg.innerText = "";
 
+  // -------------------------
   // validação básica
+  // -------------------------
+
   if(username.length < 3){
     msg.innerText = "Usuário inválido.";
     showToast('error', 'Usuário inválido.');
@@ -57,6 +117,11 @@ async function login() {
   if(password.length < 3){
     msg.innerText = "Senha inválida.";
     showToast('error', 'Senha inválida.');
+    return;
+  }
+
+  if(!validarSenha(password)){
+    msg.innerText = "Senha deve conter número e letra maiúscula.";
     return;
   }
 
@@ -79,9 +144,27 @@ async function login() {
 
     const data = await response.json();
 
-    // salva informações do usuário
+    // -------------------------
+    // MFA
+    // -------------------------
+
+    if(data.mfaRequired){
+      localStorage.setItem("username", username);
+      window.location.href = "mfa.html";
+      return;
+    }
+
+    // -------------------------
+    // criar sessão
+    // -------------------------
+
     localStorage.setItem("username", data.username);
     localStorage.setItem("role", data.role);
+    localStorage.setItem("loginTime", Date.now());
+
+    // -------------------------
+    // redirecionamento
+    // -------------------------
 
     showToast('success', 'Login realizado com sucesso.');
 
@@ -93,6 +176,11 @@ async function login() {
         window.location.href = "dashboard.html";
       }
     }, 700);
+    if(data.role === "admin"){
+      window.location.href = "admin.html";
+    } else {
+      window.location.href = "dashboard.html";
+    }
 
   } catch(error){
 

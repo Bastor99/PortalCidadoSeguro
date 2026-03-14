@@ -1,65 +1,143 @@
-const express = require('express');
-const fs = require('fs');
-const path = require('path');
+const express = require("express");
+const crypto = require("crypto");
 
 const app = express();
+
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static("public"));
 
-const users = [
-    {id: 1, username: "cidadao", password: "123456", role: "cidadao"},
-    {id: 2, username: "admin", password: "admin123", role: "admin"}
-];
 
-function logAccess(message) {
-    const log = `[${new Date().toISOString()}] ${message}\n`;
-    fs.appendFileSync("./logs/access.log", log);
+// =============================
+// UTILITÁRIOS
+// =============================
+
+// hash de senha
+function hashPassword(password){
+  return crypto
+    .createHash("sha256")
+    .update(password)
+    .digest("hex");
 }
 
-app.post("/login", (req, res) => {
-    const { username, password } = req.body;
+// sanitização básica
+function sanitize(input){
+  return input.replace(/[<>]/g, "");
+}
 
-    const user = users.find(
-        u => u.username === username && u.password === password
-    );
 
-    if (!user) {
-        logAccess(`Falha de login: ${username}`);
-        return res.status(401).json({ error: "Credenciais inválidas." });
-    }
+// =============================
+// RATE LIMIT
+// =============================
 
-    logAccess(`Login realizado: ${username}`);
+const attempts = {};
 
-    res.json({
-        username: user.username,
-        role: user.role
-    });
-});
+function checkRateLimit(ip){
 
-app.get("/logs", (req, res) => {
-
-  try {
-
-    const data = fs.readFileSync("./logs/access.log", "utf8");
-
-    const lines = data.split("\n").filter(l => l.trim() !== "");
-
-    const logs = lines.map(line => {
-      const parts = line.split("]");
-      return {
-        date: parts[0].replace("[",""),
-        message: parts[1].trim()
-      };
-    });
-
-    res.json(logs);
-
-  } catch {
-    res.json([]);
+  if(!attempts[ip]){
+    attempts[ip] = 1;
+    return true;
   }
 
+  attempts[ip]++;
+
+  if(attempts[ip] > 5){
+    return false;
+  }
+
+  return true;
+}
+
+
+// =============================
+// BASE DE USUÁRIOS
+// =============================
+
+const users = [
+  {
+    username: "admin",
+    password: hashPassword("admin123"),
+    role: "admin"
+  },
+  {
+    username: "cidadao",
+    password: hashPassword("123456"),
+    role: "user"
+  }
+];
+
+
+// =============================
+// ROTA DE LOGIN
+// =============================
+
+app.post("/api/login", (req, res) => {
+
+  const ip = req.ip;
+
+  if(!checkRateLimit(ip)){
+    return res.status(429).json({
+      error: "Muitas tentativas de login."
+    });
+  }
+
+  const username = sanitize(req.body.username || "");
+  const password = sanitize(req.body.password || "");
+
+  const hashedPassword = hashPassword(password);
+
+  const user = users.find(
+    u => u.username === username && u.password === hashedPassword
+  );
+
+  if(!user){
+
+    console.log({
+      event: "login_failed",
+      username,
+      ip,
+      date: new Date()
+    });
+
+    return res.status(401).json({
+      error: "Credenciais inválidas"
+    });
+  }
+
+  if(user.role === "admin"){
+
+    console.log({
+      event: "mfa_required",
+      username,
+      ip,
+      date: new Date()
+    });
+
+    return res.json({
+      mfaRequired: true
+    });
+  }
+
+  console.log({
+    event: "login_success",
+    username,
+    ip,
+    date: new Date()
+  });
+
+  res.json({
+    username: user.username,
+    role: user.role
+  });
+
 });
 
-app.listen(3000, () => {
-    console.log("Servidor rodando em http://localhost:3000");
-})
+
+// =============================
+// SERVIDOR
+// =============================
+
+const PORT = 3000;
+
+app.listen(PORT, () => {
+  console.log(`Servidor rodando em http://localhost:${PORT}`);
+});
