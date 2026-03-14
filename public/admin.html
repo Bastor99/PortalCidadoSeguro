@@ -28,14 +28,14 @@
 <td>101</td>
 <td>João Silva</td>
 <td>Pendente</td>
-<td><button>Aprovar</button></td>
+<td><button onclick="showToast('success','Solicitação aprovada')">Aprovar</button></td>
 </tr>
 
 <tr>
 <td>102</td>
 <td>Maria Souza</td>
 <td>Em análise</td>
-<td><button>Visualizar</button></td>
+<td><button onclick="showToast('info','Visualizando solicitação')">Visualizar</button></td>
 </tr>
 
 </table>
@@ -53,35 +53,43 @@
 
 <button onclick="carregarLogs()">Atualizar Logs</button>
 
+<script src="script.js"></script>
 <script>
 if(localStorage.getItem("role") !== "admin"){
-  alert("Acesso negado");
-  window.location = "index.html";
+  showToast('error', 'Acesso negado');
+  setTimeout(() => { window.location = "index.html"; }, 900);
 }
 
 async function carregarLogs(){
+  try {
+    const response = await fetch("/logs");
+    if(!response.ok) throw new Error('Falha');
+    const logs = await response.json();
 
-  const response = await fetch("/logs");
-  const logs = await response.json();
+    const table = document.getElementById("logTable");
 
-  const table = document.getElementById("logTable");
+    table.innerHTML = `
+    <tr>
+    <th>Data</th>
+    <th>Evento</th>
+    </tr>
+    `;
 
-  table.innerHTML = `
-  <tr>
-  <th>Data</th>
-  <th>Evento</th>
-  </tr>
-  `;
+    logs.reverse().forEach(log => {
 
-  logs.reverse().forEach(log => {
+      const row = document.createElement("tr");
 
-    const row = document.createElement("tr");
+      row.innerHTML = `<td>${log.date}</td><td>${log.message}</td>`;
 
-    row.innerHTML = `<td>${log.date}</td><td>${log.message}</td>`;
+      table.appendChild(row);
 
-    table.appendChild(row);
+    });
 
-  });
+    showToast('success', 'Logs atualizados');
+
+  } catch (e) {
+    showToast('error', 'Falha ao carregar logs');
+  }
 
 }
 
