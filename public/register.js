@@ -1,18 +1,23 @@
 async function register(){
 
-  const username = document.getElementById("user").value.trim();
-  const password = document.getElementById("pass").value.trim();
+  const username = (document.getElementById("user") || {}).value || '';
+  const password = (document.getElementById("pass") || {}).value || '';
   const msg = document.getElementById("msg");
 
-  msg.innerText = "";
+ if(msg) msg.innerText = '';
 
-  if(username.length < 3){
+ if(!username || username.trim().length < 3){
     msg.innerText = "Usuário muito curto";
     return;
   }
 
   if(password.length < 6){
     msg.innerText = "Senha muito curta";
+    return;
+  }
+
+   if(!validarSenha(password)){
+    msg.innerText = "Senha deve conter pelo menos 1 letra maiúscula e 1 número.";
     return;
   }
 
@@ -24,10 +29,16 @@ async function register(){
         "Content-Type":"application/json"
       },
       body:JSON.stringify({
-        username,
+        username : username.trim(),
         password
       })
     });
+
+    if(response.status === 201) {
+        msg.innerText = "Cadastro realizado. Redirecionando para login..."
+        setTimeout(() => { window.location.href = 'login.html'; }, 900);
+        return;
+    }
 
     const data = await response.json();
 
