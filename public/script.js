@@ -9,6 +9,62 @@ function ensureToastContainer(){
   return c;
 }
 
+
+// =============================
+// REGISTRO
+// =============================
+
+async function register(){
+
+  const username = (document.getElementById('reg-user') || {}).value || '';
+  const password = (document.getElementById('reg-pass') || {}).value || '';
+  const passConfirm = (document.getElementById('reg-pass-confirm') || {}).value || '';
+  const msg = document.getElementById('reg-msg');
+
+  if(msg) msg.innerText = '';
+
+  if(!username || username.trim().length < 3){
+    showToast('error', 'Usuário inválido.');
+    return;
+  }
+
+  if(password.length < 3){
+    showToast('error', 'Senha muito curta.');
+    return;
+  }
+
+  if(password !== passConfirm){
+    showToast('error', 'Senhas não coincidem.');
+    return;
+  }
+
+  try{
+    const response = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: username.trim(), password })
+    });
+
+    if(response.status === 201){
+      showToast('success', 'Cadastro realizado. Redirecionando para login...');
+      setTimeout(() => { window.location.href = 'login.html'; }, 900);
+      return;
+    }
+
+    const data = await response.json();
+    if(data && data.error){
+      showToast('error', data.error);
+      return;
+    }
+
+    showToast('error', 'Erro ao cadastrar.');
+
+  } catch(e){
+    showToast('error', 'Erro de conexão.');
+  }
+
+}
+
 function showToast(type, message, duration = 3500){
   const container = ensureToastContainer();
 
@@ -120,10 +176,7 @@ async function login() {
     return;
   }
 
-  if(!validarSenha(password)){
-    msg.innerText = "Senha deve conter número e letra maiúscula.";
-    return;
-  }
+  // validação de complexidade removida (apenas demo)
 
   try {
 
@@ -145,12 +198,10 @@ async function login() {
     const data = await response.json();
 
     // -------------------------
-    // MFA
+    // MFA (demo)
     // -------------------------
-
     if(data.mfaRequired){
-      localStorage.setItem("username", username);
-      window.location.href = "mfa.html";
+      showToast('info', 'MFA requerido para admin. Não implementado no demo.');
       return;
     }
 
@@ -165,10 +216,8 @@ async function login() {
     // -------------------------
     // redirecionamento
     // -------------------------
-
     showToast('success', 'Login realizado com sucesso.');
-
-    // redireciona conforme o tipo
+    // redireciona conforme o tipo (pequeno delay para mostrar toast)
     setTimeout(() => {
       if(data.role === "admin"){
         window.location.href = "admin.html";
@@ -176,11 +225,6 @@ async function login() {
         window.location.href = "dashboard.html";
       }
     }, 700);
-    if(data.role === "admin"){
-      window.location.href = "admin.html";
-    } else {
-      window.location.href = "dashboard.html";
-    }
 
   } catch(error){
 

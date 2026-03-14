@@ -1,5 +1,7 @@
 const express = require("express");
 const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
 
 const app = express();
 
@@ -7,6 +9,10 @@ app.use(express.json());
 app.use(express.static("public"));
 
 
+// garante diretório de logs
+if(!fs.existsSync(path.join(__dirname, 'logs'))){
+    fs.mkdirSync(path.join(__dirname, 'logs'), { recursive: true });
+}
 // =============================
 // UTILITÁRIOS
 // =============================
@@ -140,4 +146,41 @@ const PORT = 3000;
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando em http://localhost:${PORT}`);
+});
+
+
+// =============================
+// ROTA DE REGISTRO
+// =============================
+
+app.post('/api/register', (req, res) => {
+
+  const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+
+  if(!checkRateLimit(ip)){
+    return res.status(429).json({ error: 'Muitas tentativas. Tente mais tarde.' });
+  }
+
+  const username = sanitize(req.body.username || '').trim();
+  const password = String(req.body.password || '');
+
+  if(!username || !password || password.length < 3){
+    return res.status(400).json({ error: 'Dados inválidos.' });
+  }
+
+  // verifica existência
+  if(users.some(u => u.username === username)){
+    return res.status(409).json({ error: 'Usuário já existe.' });
+  }
+
+  const hashed = hashPassword(password);
+
+  const newUser = { username, password: hashed, role: 'user' };
+  users.push(newUser);
+
+  console.log({ event: 'user_registered', username, ip, date: new Date() });
+  fs.appendFileSync(path.join(__dirname, 'logs', 'access.log'), `[${new Date().toISOString()}] Registro: ${username} (${ip})\n`);
+
+  return res.status(201).json({ username: newUser.username, role: newUser.role });
+
 });
