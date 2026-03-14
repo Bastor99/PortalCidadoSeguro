@@ -1,17 +1,19 @@
 const express = require("express");
 const crypto = require("crypto");
+const fs = require("fs");
 
 const app = express();
 
 app.use(express.json());
 app.use(express.static("public"));
 
+const USERS_FILE = "users.json";
+
 
 // =============================
 // UTILITÁRIOS
 // =============================
 
-// hash de senha
 function hashPassword(password){
   return crypto
     .createHash("sha256")
@@ -19,114 +21,115 @@ function hashPassword(password){
     .digest("hex");
 }
 
-// sanitização básica
 function sanitize(input){
-  return input.replace(/[<>]/g, "");
+  return input.replace(/[<>]/g,"");
 }
 
 
 // =============================
-// RATE LIMIT
+// LER USUÁRIOS
 // =============================
 
-const attempts = {};
+function getUsers(){
 
-function checkRateLimit(ip){
+  const data = fs.readFileSync(USERS_FILE);
 
-  if(!attempts[ip]){
-    attempts[ip] = 1;
-    return true;
-  }
+  return JSON.parse(data);
 
-  attempts[ip]++;
+}
 
-  if(attempts[ip] > 5){
-    return false;
-  }
+function saveUsers(users){
 
-  return true;
+  fs.writeFileSync(
+    USERS_FILE,
+    JSON.stringify(users,null,2)
+  );
+
 }
 
 
 // =============================
-// BASE DE USUÁRIOS
+// CADASTRO
 // =============================
 
-const users = [
-  {
-    username: "admin",
-    password: hashPassword("admin123"),
-    role: "admin"
-  },
-  {
-    username: "cidadao",
-    password: hashPassword("123456"),
-    role: "user"
-  }
-];
-
-
-// =============================
-// ROTA DE LOGIN
-// =============================
-
-app.post("/api/login", (req, res) => {
-
-  const ip = req.ip;
-
-  if(!checkRateLimit(ip)){
-    return res.status(429).json({
-      error: "Muitas tentativas de login."
-    });
-  }
+app.post("/api/register",(req,res)=>{
 
   const username = sanitize(req.body.username || "");
   const password = sanitize(req.body.password || "");
 
-  const hashedPassword = hashPassword(password);
+  if(username.length < 3){
+
+    return res.status(400).json({
+      error:"Usuário inválido"
+    });
+
+  }
+
+  if(password.length < 6){
+
+    return res.status(400).json({
+      error:"Senha muito curta"
+    });
+
+  }
+
+  const users = getUsers();
+
+  const exists = users.find(
+    u => u.username === username
+  );
+
+  if(exists){
+
+    return res.status(400).json({
+      error:"Usuário já existe"
+    });
+
+  }
+
+  users.push({
+    username,
+    password: hashPassword(password),
+    role:"user"
+  });
+
+  saveUsers(users);
+
+  res.json({
+    success:true
+  });
+
+});
+
+
+// =============================
+// LOGIN
+// =============================
+
+app.post("/api/login",(req,res)=>{
+
+  const username = sanitize(req.body.username || "");
+  const password = sanitize(req.body.password || "");
+
+  const hashed = hashPassword(password);
+
+  const users = getUsers();
 
   const user = users.find(
-    u => u.username === username && u.password === hashedPassword
+    u => u.username === username &&
+    u.password === hashed
   );
 
   if(!user){
-
-    console.log({
-      event: "login_failed",
-      username,
-      ip,
-      date: new Date()
-    });
-
     return res.status(401).json({
-      error: "Credenciais inválidas"
+      error:"Credenciais inválidas"
     });
+
   }
-
-  if(user.role === "admin"){
-
-    console.log({
-      event: "mfa_required",
-      username,
-      ip,
-      date: new Date()
-    });
-
-    return res.json({
-      mfaRequired: true
-    });
-  }
-
-  console.log({
-    event: "login_success",
-    username,
-    ip,
-    date: new Date()
-  });
 
   res.json({
-    username: user.username,
-    role: user.role
+    username:user.username,
+    role:user.role
   });
 
 });
@@ -138,6 +141,6 @@ app.post("/api/login", (req, res) => {
 
 const PORT = 3000;
 
-app.listen(PORT, () => {
+app.listen(PORT,()=>{
   console.log(`Servidor rodando em http://localhost:${PORT}`);
 });

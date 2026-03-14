@@ -103,16 +103,6 @@ async function login() {
     const data = await response.json();
 
     // -------------------------
-    // MFA
-    // -------------------------
-
-    if(data.mfaRequired){
-      localStorage.setItem("username", username);
-      window.location.href = "mfa.html";
-      return;
-    }
-
-    // -------------------------
     // criar sessão
     // -------------------------
 
