@@ -26,54 +26,37 @@
     async function verificar() {
 
       const code = document.getElementById("code").value.trim();
-      const msg = document.getElementById("msg");
-
-      msg.innerText = "";
-
       const mfaToken = sessionStorage.getItem("mfaToken");
 
-      // 🔒 validações básicas
-      if(!mfaToken){
-        msg.innerText = "Sessão inválida. Faça login novamente.";
-        return;
-      }
-
-      if(code.length !== 6){
-        msg.innerText = "Código deve ter 6 dígitos.";
-        return;
-      }
-
-      try {
+        if(!code){
+            alert("Digite o código");
+            return;
+        }
 
         const response = await fetch("/api/verify-mfa", {
-          method: "POST",
-          headers: {
+            method: "POST",
+            headers: {
             "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
+            },
+            body: JSON.stringify({
             code,
             mfaToken
-          })
+            })
         });
 
         const data = await response.json();
 
         if(response.ok){
 
-          // sucesso
-          sessionStorage.removeItem("mfaToken");
+            sessionStorage.removeItem("mfaToken");
 
-          alert("Login autorizado!");
+            localStorage.setItem("authToken", data.authToken);
 
-          window.location.href = "/dashboard.html";
+            window.location.href = "/admin.html";
 
         } else {
-          msg.innerText = data.error || "Código inválido.";
+            alert(data.error);
         }
-
-      } catch (error) {
-        msg.innerText = "Erro ao validar MFA.";
-      }
     }
 
     // 🔹 UX: permitir Enter para enviar

@@ -1,4 +1,6 @@
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
+const JWT_SECRET = "SEGREDO_SECRETO"
 
 
 // =============================
@@ -112,13 +114,14 @@ export default function handler(req, res) {
   // MFA para admin
   if(user.role === "admin"){
 
-    const mfaToken = crypto.randomBytes(32).toString("hex");
-    const mfaSessions = {};
-
-    mfaSessions[mfaToken] = {
-      username: user.username,
-      expires: Date.now() + 5 * 60 * 1000 // 5 min
-    };
+    const mfaToken = jwt.sign(
+      {
+        username: user.username,
+        mfa: true
+      },
+      JWT_SECRET,
+      { expiresIn: "5m" }
+    );
 
     console.log(JSON.stringify({
       event: "mfa_required",

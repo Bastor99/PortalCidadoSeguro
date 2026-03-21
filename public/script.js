@@ -9,6 +9,29 @@ function ensureToastContainer(){
   return c;
 }
 
+// =============================
+// LOG DE EVENTOS
+// =============================
+
+async function logEvent(action){
+
+  const token = localStorage.getItem("authToken");
+
+  try {
+
+    await fetch("/api/log-event", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { "Authorization": "Bearer " + token })
+      },
+      body: JSON.stringify({ action })
+    });
+
+  } catch (e) {
+    console.error("Erro ao registrar log");
+  }
+}
 
 // =============================
 // REGISTRO
@@ -94,6 +117,7 @@ function hideToast(el){
   el.classList.remove('show');
   setTimeout(() => { if(el.parentNode) el.parentNode.removeChild(el); }, 300);
 }
+
 // =============================
 // CONFIGURAÇÕES
 // =============================
@@ -132,7 +156,6 @@ function verificarSessao(){
 
 }
 
-
 // =============================
 // LOGOUT
 // =============================
@@ -146,7 +169,6 @@ function logout(){
   window.location.href = "login.html";
 
 }
-
 
 // =============================
 // LOGIN
@@ -200,12 +222,12 @@ async function login() {
     // -------------------------
     // MFA (demo)
     // -------------------------
-    if(data.mfaRequired){
-      showToast('info', 'Digite o código MFA.');
-      sessionStorage.setItem("mfaToken", data.mfaToken);
-      window.location.href = "/mfa.html";
-      return;
-    }
+   if(data.mfaRequired){
+    sessionStorage.setItem("mfaToken", data.mfaToken);
+    showToast('info', 'Digite o código MFA.');
+    window.location.href = "/mfa.html";
+    return;
+  }
 
     // -------------------------
     // criar sessão
