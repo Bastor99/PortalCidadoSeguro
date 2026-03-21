@@ -7,9 +7,82 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h2>Verificação de Segurança</h2>
-    <p>Digite o código enviado ao seu dispositivo.</p>
-    <input id="code">
-    <button onclick="verificar()">Confirmar</button>
+    <div class="container">
+        <h2>Verificação de Segurança</h2>
+        <p>Digite o código enviado ao seu dispositivo.</p>
+        <input 
+        id="code" 
+        type="text" 
+        placeholder="Código MFA" 
+        maxlength="6"
+        autocomplete="one-time-code"
+        >
+
+        <button onclick="verificar()">Confirmar</button>
+        <p id="msg" style="color: red;"></p>
+    </div>
+
+  <script>
+    async function verificar() {
+
+      const code = document.getElementById("code").value.trim();
+      const msg = document.getElementById("msg");
+
+      msg.innerText = "";
+
+      const mfaToken = sessionStorage.getItem("mfaToken");
+
+      // 🔒 validações básicas
+      if(!mfaToken){
+        msg.innerText = "Sessão inválida. Faça login novamente.";
+        return;
+      }
+
+      if(code.length !== 6){
+        msg.innerText = "Código deve ter 6 dígitos.";
+        return;
+      }
+
+      try {
+
+        const response = await fetch("/api/verify-mfa", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            code,
+            mfaToken
+          })
+        });
+
+        const data = await response.json();
+
+        if(response.ok){
+
+          // sucesso
+          sessionStorage.removeItem("mfaToken");
+
+          alert("Login autorizado!");
+
+          window.location.href = "/dashboard.html";
+
+        } else {
+          msg.innerText = data.error || "Código inválido.";
+        }
+
+      } catch (error) {
+        msg.innerText = "Erro ao validar MFA.";
+      }
+    }
+
+    // 🔹 UX: permitir Enter para enviar
+    document.getElementById("code").addEventListener("keypress", function(e){
+      if(e.key === "Enter"){
+        verificar();
+      }
+    });
+
+  </script>
 </body>
 </html>

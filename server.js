@@ -2,6 +2,7 @@ const express = require("express");
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
+const mfaSessions = {};
 
 const app = express();
 
@@ -111,6 +112,13 @@ app.post("/api/login", (req, res) => {
 
   if(user.role === "admin"){
 
+    const mfaToken = crypto.randomBytes(32).toString("hex");
+
+    mfaSessions[mfaToken] = {
+      username: user.username,
+      expires: Date.now() + 5 * 60 * 1000 // 5 min
+    }
+
     console.log({
       event: "mfa_required",
       username,
@@ -119,7 +127,8 @@ app.post("/api/login", (req, res) => {
     });
 
     return res.json({
-      mfaRequired: true
+      mfaRequired: true,
+      mfaToken
     });
   }
 
@@ -137,6 +146,44 @@ app.post("/api/login", (req, res) => {
 
 });
 
+// =============================
+// ROTA DE AUTENTICAÇÃO MFA
+// =============================
+
+app.post("/api/verify-mfa", (req, res) => {
+
+  const { code, mfaToken } = req.body;
+
+  const session = mfaSessions[mfaToken];
+
+  if(!session){
+    return res.status(401).json({
+      error: "Sessão MFA inválida"
+    });
+  }
+
+  if(Date.now() > session.expires){
+    delete mfaSessions[mfaToken];
+
+    return res.status(401).json({
+      error: "MFA expirado"
+    });
+  }
+
+  // DEMO (substituir por TOTP depois)
+  if(code !== "123456"){
+    return res.status(401).json({
+      error: "Código inválido"
+    });
+  }
+
+  delete mfaSessions[mfaToken];
+
+  return res.json({
+    success: true,
+    username: session.username
+  });
+});
 
 // =============================
 // SERVIDOR

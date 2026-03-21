@@ -201,7 +201,9 @@ async function login() {
     // MFA (demo)
     // -------------------------
     if(data.mfaRequired){
-      showToast('info', 'MFA requerido para admin. Não implementado no demo.');
+      showToast('info', 'Digite o código MFA.');
+      sessionStorage.setItem("mfaToken", data.mfaToken);
+      window.location.href = "/mfa.html";
       return;
     }
 

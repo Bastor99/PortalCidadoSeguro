@@ -112,6 +112,14 @@ export default function handler(req, res) {
   // MFA para admin
   if(user.role === "admin"){
 
+    const mfaToken = crypto.randomBytes(32).toString("hex");
+    const mfaSessions = {};
+
+    mfaSessions[mfaToken] = {
+      username: user.username,
+      expires: Date.now() + 5 * 60 * 1000 // 5 min
+    };
+
     console.log(JSON.stringify({
       event: "mfa_required",
       username,
@@ -120,7 +128,8 @@ export default function handler(req, res) {
     }));
 
     return res.status(200).json({
-      mfaRequired: true
+      mfaRequired: true,
+      mfaToken
     });
   }
 
