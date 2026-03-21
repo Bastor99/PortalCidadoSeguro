@@ -28,14 +28,14 @@
 <td>101</td>
 <td>João Silva</td>
 <td>Pendente</td>
-<td><button onclick="showToast('success','Solicitação aprovada')">Aprovar</button></td>
+<td><button onclick="aprovar()">Aprovar</button></td>
 </tr>
 
 <tr>
 <td>102</td>
 <td>Maria Souza</td>
 <td>Em análise</td>
-<td><button onclick="showToast('info','Visualizando solicitação')">Visualizar</button></td>
+<td><button onclick="visualizar()">Visualizar</button></td>
 </tr>
 
 </table>
@@ -54,16 +54,37 @@
 <button onclick="carregarLogs()">Atualizar Logs</button>
 
 <script src="script.js"></script>
+
 <script>
-if(localStorage.getItem("role") !== "admin"){
+function aprovar(){
+  showToast('success','Solicitação aprovada');
+  logEvent("Admin aprovou solicitação ID 101");
+}
+
+function visualizar(){
+  showToast('info','Visualizando solicitação');
+  logEvent("Admin visualizou solicitação ID 102");
+}
+</script>
+
+<script>
+
+const token = localStorage.getItem("authToken");
+
+if(!token){
   showToast('error', 'Acesso negado');
-  setTimeout(() => { window.location = "index.html"; }, 900);
   window.location = "index.html";
 }
 
 async function carregarLogs(){
   try {
-    const response = await fetch("/logs");
+    const token = localStorage.getItem("authToken");
+
+    const response = await fetch("/logs", {
+      headers: {
+      "Authorization": "Bearer " + token
+      }
+    });
     if(!response.ok) throw new Error('Falha');
     const logs = await response.json();
 

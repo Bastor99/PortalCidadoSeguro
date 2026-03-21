@@ -20,19 +20,19 @@
 <div class="card">
 <h3>Tributos</h3>
 <p>Emitir e consultar boletos municipais.</p>
-<button onclick="showToast('info','Funcionalidade indisponível (demo)')">Consultar</button>
+<button onclick="acaoTributos()">Consultar</button>
 </div>
 
 <div class="card">
 <h3>Solicitações</h3>
 <p>Acompanhe suas solicitações abertas.</p>
-<button onclick="showToast('info','Listando suas solicitações (demo)')">Acessar</button>
+<button onclick="acaoSolicitacoes()">Acessar</button>
 </div>
 
 <div class="card">
 <h3>Enviar Documentos</h3>
 <p>Envie documentos para análise.</p>
-<button onclick="showToast('info','Envio iniciado (demo)')">Enviar</button>
+<button onclick="acaoDocumentos()">Enviar</button>
 </div>
 
 </div>
@@ -40,6 +40,23 @@
 </div>
 
 <script src="script.js"></script>
+
+<script>
+function acaoTributos(){
+  showToast('info','Funcionalidade indisponível (demo)');
+  logEvent("Usuário clicou em Tributos");
+}
+
+function acaoSolicitacoes(){
+  showToast('info','Listando solicitações');
+  logEvent("Usuário acessou Solicitações");
+}
+
+function acaoDocumentos(){
+  showToast('info','Envio iniciado');
+  logEvent("Usuário iniciou envio de documentos");
+}
+</script>
 
 </body>
 </html>

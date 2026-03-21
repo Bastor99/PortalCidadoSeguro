@@ -2,7 +2,8 @@ const express = require("express");
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
-const mfaSessions = {};
+const jwt = require("jsonwebtoken");
+const JWT_SECRET = "SEGREDO_SECRETO"
 
 const app = express();
 
@@ -14,6 +15,103 @@ app.use(express.static("public"));
 if(!fs.existsSync(path.join(__dirname, 'logs'))){
     fs.mkdirSync(path.join(__dirname, 'logs'), { recursive: true });
 }
+
+// =============================
+// LOGS(FUNÇÃO)
+// =============================
+
+function salvarLog(mensagem){
+
+  const logPath = path.join(__dirname, "logs", "logs.json");
+
+  let logs = [];
+
+  if(fs.existsSync(logPath)){
+    logs = JSON.parse(fs.readFileSync(logPath, "utf-8"));
+  }
+
+  logs.push({
+    date: new Date().toLocaleString(),
+    message: mensagem
+  });
+
+  fs.writeFileSync(logPath, JSON.stringify(logs, null, 2));
+}
+
+// =============================
+// LOGS
+// =============================
+
+app.get("/logs", (req, res) => {
+
+  const authHeader = req.headers.authorization;
+
+  if(!authHeader){
+    return res.status(401).json({ error: "Token não fornecido" });
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  try {
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    if(decoded.role !== "admin"){
+      return res.status(403).json({ error: "Acesso negado" });
+    }
+
+    const logPath = path.join(__dirname, "logs", "logs.json");
+
+    if(!fs.existsSync(logPath)){
+      return res.json([]);
+    }
+
+    const data = fs.readFileSync(logPath, "utf-8");
+
+    const logs = JSON.parse(data);
+
+    return res.json(logs);
+
+  } catch {
+    return res.status(401).json({ error: "Token inválido" });
+  }
+});
+
+// =============================
+// LOGS EVENTOS
+// =============================
+
+app.post("/api/log-event", (req, res) => {
+
+  const authHeader = req.headers.authorization;
+  let username = "anon";
+  let role = "guest";
+
+  // tenta identificar usuário via token
+  if(authHeader){
+    try {
+      const token = authHeader.split(" ")[1];
+      const decoded = jwt.verify(token, JWT_SECRET);
+
+      username = decoded.username;
+      role = decoded.role;
+
+    } catch {
+      // token inválido → continua como anon
+    }
+  }
+
+  const { action } = req.body;
+
+  if(!action){
+    return res.status(400).json({ error: "Ação não informada" });
+  }
+
+  salvarLog(`[${role}] ${username}: ${action}`);
+
+  res.json({ success: true });
+});
+
 // =============================
 // UTILITÁRIOS
 // =============================
@@ -98,12 +196,7 @@ app.post("/api/login", (req, res) => {
 
   if(!user){
 
-    console.log({
-      event: "login_failed",
-      username,
-      ip,
-      date: new Date()
-    });
+    salvarLog(`Login falhou: ${username} (${ip})`);
 
     return res.status(401).json({
       error: "Credenciais inválidas"
@@ -112,19 +205,16 @@ app.post("/api/login", (req, res) => {
 
   if(user.role === "admin"){
 
-    const mfaToken = crypto.randomBytes(32).toString("hex");
+    const mfaToken = jwt.sign(
+      {
+        username: user.username,
+        mfa: true
+      },
+      JWT_SECRET,
+      { expiresIn: "5m" }
+    );
 
-    mfaSessions[mfaToken] = {
-      username: user.username,
-      expires: Date.now() + 5 * 60 * 1000 // 5 min
-    }
-
-    console.log({
-      event: "mfa_required",
-      username,
-      ip,
-      date: new Date()
-    });
+    salvarLog(`MFA requerido: ${username}`);
 
     return res.json({
       mfaRequired: true,
@@ -132,12 +222,7 @@ app.post("/api/login", (req, res) => {
     });
   }
 
-  console.log({
-    event: "login_success",
-    username,
-    ip,
-    date: new Date()
-  });
+    salvarLog(`Login sucesso: ${username} (${ip})`);
 
   res.json({
     username: user.username,
@@ -154,35 +239,53 @@ app.post("/api/verify-mfa", (req, res) => {
 
   const { code, mfaToken } = req.body;
 
-  const session = mfaSessions[mfaToken];
-
-  if(!session){
+  if(!mfaToken){
     return res.status(401).json({
-      error: "Sessão MFA inválida"
+      error: "Token MFA não fornecido"
     });
   }
 
-  if(Date.now() > session.expires){
-    delete mfaSessions[mfaToken];
+  try {
+
+    const decoded = jwt.verify(mfaToken, JWT_SECRET);
+
+    // 🔐 garante que é token de MFA
+    if(!decoded.mfa){
+      return res.status(401).json({
+        error: "Token inválido"
+      });
+    }
+
+    // 🔢 DEMO (trocar por TOTP depois)
+    if(code !== "123456"){
+      return res.status(401).json({
+        error: "Código inválido"
+      });
+    }
+
+    // ✅ sucesso → login finalizado
+    salvarLog(`MFA sucesso: ${decoded.username}`);
+
+    const authToken = jwt.sign(
+      {
+        username: decoded.username,
+        role: "admin"
+      },
+      JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    return res.json({
+      success: true,
+      authToken
+    });
+
+  } catch (err) {
 
     return res.status(401).json({
-      error: "MFA expirado"
+      error: "Token inválido ou expirado"
     });
   }
-
-  // DEMO (substituir por TOTP depois)
-  if(code !== "123456"){
-    return res.status(401).json({
-      error: "Código inválido"
-    });
-  }
-
-  delete mfaSessions[mfaToken];
-
-  return res.json({
-    success: true,
-    username: session.username
-  });
 });
 
 // =============================
@@ -225,7 +328,7 @@ app.post('/api/register', (req, res) => {
   const newUser = { username, password: hashed, role: 'user' };
   users.push(newUser);
 
-  console.log({ event: 'user_registered', username, ip, date: new Date() });
+  salvarLog(`Registro: ${username} (${ip})`);
   fs.appendFileSync(path.join(__dirname, 'logs', 'access.log'), `[${new Date().toISOString()}] Registro: ${username} (${ip})\n`);
 
   return res.status(201).json({ username: newUser.username, role: newUser.role });
